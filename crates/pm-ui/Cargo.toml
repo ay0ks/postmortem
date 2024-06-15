@@ -1,0 +1,13 @@
+[package]
+name = "pm-ui"
+version = "0.1.0"
+edition.workspace = true
+authors.workspace = true
+
+[dependencies]
+x11 = { version = "2.21.0", optional = true }
+
+[features]
+default = ["gui"]
+tui = []
+gui = ["dep:x11"]

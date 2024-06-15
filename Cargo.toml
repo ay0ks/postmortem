@@ -1,0 +1,6 @@
+[workspace]
+members = ["crates/pm-core", "crates/pm-ui"]
+
+[workspace.package]
+edition = "2021"
+authors = ["Dimitriy \"ay0ks\" <ay0o0ks000@gmail.com>"]
