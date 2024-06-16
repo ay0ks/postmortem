@@ -1,3 +1,5 @@
+#![feature(new_uninit)]
+
 #[cfg(feature = "gui")]
 mod gui;
 
@@ -6,7 +8,6 @@ mod tui;
 
 #[cfg(feature = "gui")]
 pub use gui::*;
-
 #[cfg(feature = "tui")]
 pub use tui::*;
 

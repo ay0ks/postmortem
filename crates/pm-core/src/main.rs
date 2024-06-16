@@ -1,8 +1,9 @@
 use pm_ui::GCanvas;
 
 async unsafe fn async_main() {
-    let canvas = GCanvas::new(None).await;
-    canvas.show().await;
+    let mut canvas = GCanvas::new(None).await.unwrap();
+    canvas.set_title("Hello, world!").await;
+    canvas.open().await;
 
     println!("Hello, world!");
 

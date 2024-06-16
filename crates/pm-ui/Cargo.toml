@@ -5,7 +5,9 @@ edition.workspace = true
 authors.workspace = true
 
 [dependencies]
+thiserror = "1.0.61"
 x11 = { version = "2.21.0", optional = true }
+tokio = { version = "1.38.0", features = ["full"] }
 
 [build-dependencies]
 pkg-config = "0.3.16"
