@@ -7,6 +7,9 @@ authors.workspace = true
 [dependencies]
 x11 = { version = "2.21.0", optional = true }
 
+[build-dependencies]
+pkg-config = "0.3.16"
+
 [features]
 default = ["gui"]
 tui = []

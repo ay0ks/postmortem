@@ -6,3 +6,5 @@ authors.workspace = true
 
 [dependencies]
 pm-ui = { path = "../pm-ui" }
+
+tokio = { version = "1.38.0", features = ["full"] }

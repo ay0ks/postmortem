@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 members = ["crates/pm-core", "crates/pm-ui"]
 
 [workspace.package]
