@@ -17,19 +17,19 @@ pub struct CoordinateBox {
     pub c2: (i32, i32),
     pub c3: (i32, i32),
     pub c4: (i32, i32),
-    pub width: i32,
-    pub height: i32,
+    pub width: u32,
+    pub height: u32,
 }
 
 impl CoordinateBox {
-    pub fn new(x: i32, y: i32, width: i32, height: i32) -> Self {
+    pub fn new(x: i32, y: i32, width: u32, height: u32) -> Self {
         Self {
             x,
             y,
             c1: (x, y),
-            c2: (x + width, y),
-            c3: (x, y + height),
-            c4: (x + width, y + height),
+            c2: (x + (width as i32), y),
+            c3: (x, y + (height as i32)),
+            c4: (x + (width as i32), y + (height as i32)),
             width,
             height,
         }

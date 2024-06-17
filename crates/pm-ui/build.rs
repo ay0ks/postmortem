@@ -5,7 +5,7 @@ fn main() {
     let config = Config::new();
 
     if cfg!(feature = "gui") {
-        for lib in &["x11"] {
+        for lib in &["x11", "glx", "gl"] {
             config.probe(lib).unwrap();
         }
     } else if cfg!(feature = "tui") {
