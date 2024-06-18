@@ -3,7 +3,7 @@ use std::{
     mem,
     process::exit,
     ptr,
-    sync::{Arc, Mutex},
+    rc::Rc,
     thread,
 };
 
@@ -12,8 +12,8 @@ mod errors;
 use errors::X11Error;
 extern crate x11;
 use x11::{glx, xlib};
-extern crate gl;
-use gl::types::*;
+extern crate gleam;
+use gleam::gl::{self, types::*};
 mod coordinate_helper;
 pub use coordinate_helper::GCoordinateHelper;
 
@@ -32,8 +32,12 @@ pub struct GCanvas {
     x_screen_root: xlib::Window,
     x_window: xlib::Window,
     x_visual: Box<xlib::XVisualInfo>,
-    root: Object<GCanvasState>,
+    x_display_white: u64,
+    x_display_black: u64,
+    x_gc: Box<xlib::GC>,
     x_gl_context: Box<glx::GLXContext>,
+    root: Object<GCanvasState>,
+    gl: Box<gl::GlFfi>,
 }
 
 impl GCanvas {
@@ -75,6 +79,9 @@ impl GCanvas {
             ..Default::default()
         };
 
+        let x_display_white = xlib::XWhitePixel(x_display.as_mut(), x_screen);
+        let x_display_black = xlib::XBlackPixel(x_display.as_mut(), x_screen);
+
         let x_window_value_mask = xlib::CWBackPixel | xlib::CWEventMask;
         let x_window_event_mask = xlib::KeyPressMask
             | xlib::KeyReleaseMask
@@ -100,8 +107,9 @@ impl GCanvas {
             | xlib::PropertyChangeMask
             | xlib::ColormapChangeMask
             | xlib::OwnerGrabButtonMask;
+
         let mut x_window_attributes = Box::new(xlib::XSetWindowAttributes {
-            background_pixel: xlib::XBlackPixel(x_display.as_mut(), x_screen),
+            background_pixel: x_display_black,
             event_mask: x_window_event_mask,
             ..mem::zeroed()
         });
@@ -130,6 +138,20 @@ impl GCanvas {
             return Err(X11Error::CouldNotCreateWindow);
         }
 
+        let x_gc_value_mask = 0;
+        let mut x_gc_values = Box::new(xlib::XGCValues { ..mem::zeroed() });
+
+        let x_gc = Box::new(xlib::XCreateGC(
+            x_display.as_mut(),
+            x_window,
+            x_gc_value_mask,
+            x_gc_values.as_mut(),
+        ));
+
+        if x_gc.is_null() {
+            return Err(X11Error::CouldNotCreateGC);
+        }
+
         let x_gl_context = Box::new(glx::glXCreateContext(
             x_display.as_mut(),
             x_visual_info.as_mut(),
@@ -141,17 +163,24 @@ impl GCanvas {
             return Err(X11Error::CouldNotCreateGLContext);
         }
 
-        gl::load_with(|symbol| glx::glXGetProcAddress(symbol.as_ptr()).unwrap() as *const c_void);
+        let gl = Box::new(gl::GlFfi::load_with(|s| {
+            let c_str = CString::new(s).unwrap();
+            glx::glXGetProcAddress(c_str.as_ptr() as *const u8).unwrap() as *const c_void
+        }));
 
         Ok(GCanvas {
             x_display_id: (display_id, x_display_id),
             x_display,
             x_screen,
             x_screen_root,
-            x_visual: x_visual_info,
-            root: Object::new_with_state(0, 0, state.screen_width, state.screen_height, state),
             x_window,
+            x_visual: x_visual_info,
+            x_display_white,
+            x_display_black,
+            x_gc,
             x_gl_context,
+            root: Object::new_with_state(0, 0, state.screen_width, state.screen_height, state),
+            gl,
         })
     }
 
@@ -159,9 +188,13 @@ impl GCanvas {
         let title_str = CString::new(title).unwrap();
 
         xlib::XStoreName(self.x_display.as_mut(), self.x_window, title_str.as_ptr());
+        self.flush().await;
     }
 
     pub async unsafe fn open(&mut self) {
+        xlib::XSetBackground(self.x_display.as_mut(), *self.x_gc, self.x_display_black);
+        xlib::XSetForeground(self.x_display.as_mut(), *self.x_gc, self.x_display_white);
+        self.flush().await;
         self.show().await;
 
         // Hook close requests.
@@ -221,18 +254,47 @@ impl GCanvas {
         }
     }
 
+    pub async unsafe fn flush(&mut self) {
+        xlib::XFlush(self.x_display.as_mut());
+    }
+
     pub async unsafe fn show(&mut self) {
         xlib::XMapWindow(self.x_display.as_mut(), self.x_window);
+        self.flush().await;
     }
 
     pub async unsafe fn hide(&mut self) {
         xlib::XUnmapWindow(self.x_display.as_mut(), self.x_window);
+        self.flush().await;
     }
 
     pub async unsafe fn close(&mut self) {
         self.hide().await;
 
         xlib::XCloseDisplay(self.x_display.as_mut());
+    }
+
+    pub async unsafe fn add_text(&mut self, text: &str, x: i32, y: i32) {
+        let text_str = CString::new(text).unwrap();
+
+        // //draw using opengl
+        self.gl.ClearColor(1.0, 0.0, 0.0, 1.0);
+        self.gl.Clear(gl::COLOR_BUFFER_BIT);
+        self.gl.Flush();
+
+        //glx::glXSwapBuffers(self.x_display.as_mut(), self.x_window);
+
+        // draw using xlib
+        xlib::XDrawString(
+            self.x_display.as_mut(),
+            self.x_window,
+            *self.x_gc,
+            x,
+            y,
+            text_str.as_ptr(),
+            text.len() as i32,
+        );
+        self.flush().await;
     }
 }
 
