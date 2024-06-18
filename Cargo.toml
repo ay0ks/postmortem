@@ -1,7 +1,8 @@
-[workspace]
-resolver = "2"
-members = ["crates/pm-core", "crates/pm-ui"]
-
-[workspace.package]
+[package]
+name = "pm"
+version = "0.1.0"
 edition = "2021"
 authors = ["Dimitriy \"ay0ks\" <ay0o0ks000@gmail.com>"]
+
+[dependencies]
+tokio = { version = "1.38.0", features = ["full"] }
